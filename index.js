@@ -1,130 +1,133 @@
+"use strict"
 class Todo {
-   constructor(input, btn, con) {
-      this.input = input
-      this.con = con
-      this.btn = btn
-      this.idx = 1
+   constructor(input, btn, container) {
+      this.input = document.querySelector(input)
+      this.container = document.querySelector(container)
+      this.btn = document.querySelector(btn)
+
+      this._data = (localStorage.getItem('todoList')) ? JSON.parse(localStorage.getItem('todoList')) : {
+         todo: [],
+         state: true
+      }
    }
 
    addToList() {
       const val = this.input.value
-      const lists = document.querySelector(this.con)
-      this.insertToDom(lists, val, this.idx++)
-   }
-
-   insertToDom(listCon, val, id = '') {
       const regex = (/([^\s])/)
-      if (regex.test(val)) {
-         listCon.insertAdjacentHTML('beforeend', `
-            <div class="list-item" data-id="${id}">
-               <span>${val.trim()}</span>
-               <input type='checkbox' class='checkboxes' value='${val}'> 
-               <button class='deleteBtn'>Remove</button>
-               <br />
-            </div>
-         `)
+      if (regex.test(val) && !this._data.todo.includes(val)) {
+         this.insertToDom(val)
+         this._data.todo.push(val)
+         this.updateSavedData()
       }
+
+      this.input.value = '';
+      this.input.focus()
    }
 
-   checks() {
-      const checkbox = document.getElementsByClassName('checkboxes')
-      const allCheckBox = [...checkbox]
-      allCheckBox.forEach(checkbox => {
-         checkbox.addEventListener('click', function (event) {
-            if (this.checked) {
-               const parent = event.target.parentNode
-               parent.classList.add('done')
-            } else {
-               const parent = event.target.parentNode
-               parent.classList.remove('done')
-            }
-         })
+   insertToDom(val) {
+      const list = document.createElement('div')
+      const span = document.createElement('span')
+      span.innerText = val.trim()
+      list.classList.add('list-item')
+
+      const div = document.createElement('div')
+      div.classList.add('btns')
+
+      const removeBtn = document.createElement('button')
+      removeBtn.innerText = 'remove'
+      removeBtn.classList.add('remove')
+      removeBtn.addEventListener('click', (event) => this.removeFromList(event))
+
+      const checkbox = document.createElement('input')
+      checkbox.classList.add('checkbox')
+      checkbox.type = 'checkbox'
+      checkbox.value = val.trim()
+      checkbox.addEventListener('click', (event) => this.completeItem(event))
+
+      list.appendChild(span)
+      div.appendChild(checkbox)
+      div.appendChild(removeBtn)
+      list.appendChild(div)
+
+      this.container.insertBefore(list, this.container.childNodes[0])
+   }
+
+   emptyState() {
+      this.container.insertAdjacentHTML('afterend', `
+      <div class="empty-state">
+        <h3 class="empty-state__title">Add Your Todo</h3>
+        <img src="empty-state.png" class="empty-state_img" alt="Add to do">
+        <p class="empty-state__description">
+          What do you want to get done today?
+        </p>
+      </div>
+      `)
+   }
+
+   updateSavedData() {
+      this._data.state = this._data.todo.length > 0 ? false : true
+      localStorage.setItem('todoList', JSON.stringify(this._data))
+   }
+
+   removeFromList(event) {
+      const item = event.target.parentNode.parentNode;
+      const parent = item.parentNode
+      const id = (/done/).test(item.className)
+      const value = item.firstElementChild.innerText
+
+      if (!id) {
+         this._data.todo.splice(this._data.todo.indexOf(value), 1)
+      }
+
+      this.updateSavedData()
+      parent.removeChild(item)
+   }
+
+   completeItem(event) {
+      const item = event.target.parentNode.parentNode;
+      const id = (/done/).test(item.className)
+      const value = event.target.value
+
+      console.log(event.target.checked, item, value)
+      if (event.target.checked) {
+         item.classList.add('done')
+      }
+      else {
+         item.classList.remove('done')
+      }
+
+      if (id) {
+         this._data.todo.push(value)
+      } else {
+         this._data.todo.splice(this._data.todo.indexOf(value), 1)
+      }
+
+      this.updateSavedData()
+   }
+
+   renderTodoList() {
+      this.emptyState()
+      this._data.todo.forEach(val => {
+         this.insertToDom(val)
       })
-      this.removeFromStorage()
-   }
-
-   saveToStorage() {
-      const checkbox = document.getElementsByClassName('checkboxes')
-      const listItems = document.getElementsByClassName('list-item')
-      let list = new Array()
-      for (let i = 0; i < checkbox.length; i++) {
-         let listObj = {}
-         listObj.id = listItems[i].dataset.id;
-         listObj.text = checkbox[i].value
-
-         list.push(listObj)
-      }
-      localStorage.setItem('currentList', JSON.stringify(list))
-   }
-
-   getFromStorage() {
-      const lists = document.querySelector(this.con)
-      if (localStorage.getItem('currentList')) {
-         const value = JSON.parse(localStorage.getItem('currentList'))
-         value.forEach(({ id, text }) => {
-            this.insertToDom(lists, text, id)
-            this.idx = parseFloat(id) + 1
-         })
-         this.checks()
-      }
-   }
-
-   removeFromStorage() {
-      const button = document.getElementsByClassName('deleteBtn')
-      const allBtn = [...button]
-
-      const getItem = localStorage.getItem('currentList')
-      const value = getItem ? JSON.parse(getItem) : [];
-
-      allBtn.forEach(btn => {
-         btn.addEventListener('click', (event) => {
-            const parentId = event.target.parentNode.dataset.id
-            let newList = this.compareIds(value, parentId);
-            localStorage.setItem('currentList', JSON.stringify(newList))
-            event.target.parentNode.parentNode.removeChild(event.target.parentNode)
-         })
-      })
-   }
-
-   compareIds(arr, id) {
-      let index
-      for (let i = 0; i < arr.length; i++) {
-         if (arr[i].id == id) {
-            index = i
-         }
-      }
-      arr.splice(index, 1)
-      return arr
    }
 
    init() {
+      this.renderTodoList()
 
       this.btn.addEventListener('click', () => {
          this.addToList()
-         this.checks()
-         this.input.value = '';
-         this.input.focus()
-         this.saveToStorage()
       })
 
       this.input.addEventListener('keypress', (e) => {
          if (e.keyCode == 13 || e.which == 13) {
             this.addToList()
-            this.checks()
-            this.input.value = '';
-            this.input.focus()
-            this.saveToStorage()
          }
       })
 
-      this.getFromStorage()
    }
-
 
 }
 
-const input = document.getElementById('do')
-const btn = document.getElementById('click')
-
-const todo = new Todo(input, btn, '#list')
+const todo = new Todo('#do', '#click', '#list')
 todo.init()
