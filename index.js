@@ -20,6 +20,7 @@ class Todo {
          this.updateSavedData()
       }
 
+      document.querySelector('.empty__state').style.display = 'none'
       this.input.value = '';
       this.input.focus()
    }
@@ -28,18 +29,18 @@ class Todo {
       const list = document.createElement('div')
       const span = document.createElement('span')
       span.innerText = val.trim()
-      list.classList.add('list-item')
+      list.classList.add('todo__list')
 
       const div = document.createElement('div')
-      div.classList.add('btns')
+      div.classList.add('grouped__button')
 
       const removeBtn = document.createElement('button')
       removeBtn.innerText = 'remove'
-      removeBtn.classList.add('remove')
+      removeBtn.classList.add('remove-list')
       removeBtn.addEventListener('click', (event) => this.removeFromList(event))
 
       const checkbox = document.createElement('input')
-      checkbox.classList.add('checkbox')
+      checkbox.classList.add('completed-list')
       checkbox.type = 'checkbox'
       checkbox.value = val.trim()
       checkbox.addEventListener('click', (event) => this.completeItem(event))
@@ -52,16 +53,21 @@ class Todo {
       this.container.insertBefore(list, this.container.childNodes[0])
    }
 
-   emptyState() {
+   emptyState(imgSrc = "empty-state.png") {
       this.container.insertAdjacentHTML('afterend', `
-      <div class="empty-state">
-        <h3 class="empty-state__title">Add Your Todo</h3>
-        <img src="empty-state.png" class="empty-state_img" alt="Add to do">
-        <p class="empty-state__description">
+      <div class="empty__state">
+        <h3 class="empty__state-title">Add Your Todo</h3>
+        <img src=${imgSrc} class="empty__state-img" alt="Add to do">
+        <p class="empty__state-description">
           What do you want to get done today?
         </p>
       </div>
       `)
+   }
+
+   displayEmptyState() {
+      document.querySelector('.empty__state').style.display = !this.container.innerHTML
+         ? 'block' : 'none';
    }
 
    updateSavedData() {
@@ -81,6 +87,9 @@ class Todo {
 
       this.updateSavedData()
       parent.removeChild(item)
+
+      this.displayEmptyState()
+
    }
 
    completeItem(event) {
@@ -88,13 +97,8 @@ class Todo {
       const id = (/done/).test(item.className)
       const value = event.target.value
 
-      console.log(event.target.checked, item, value)
-      if (event.target.checked) {
-         item.classList.add('done')
-      }
-      else {
-         item.classList.remove('done')
-      }
+      item.style.textDecoration = event.target.checked ?
+         'line-through' : 'none'
 
       if (id) {
          this._data.todo.push(value)
@@ -107,9 +111,12 @@ class Todo {
 
    renderTodoList() {
       this.emptyState()
+
       this._data.todo.forEach(val => {
          this.insertToDom(val)
       })
+
+      this.displayEmptyState()
    }
 
    init() {
